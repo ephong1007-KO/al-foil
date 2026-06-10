@@ -320,8 +320,6 @@
 
         const specs = [];
         specs.push({ name:'두께', applied:`${thickness} µm`, note:'선택 두께' });
-        specs.push({ name:'Roll Press 선압', applied:`${lineLoad} ton/cm`, note:`전극 캘린더링 부하. 표준 ${PRESS.LP0} 초과분에 비례해 필요 연신율·인장강도↑ (요구 인자)` });
-
         // 인장강도 (Foil Baseline / 선압·로딩 요구)
         if (utsReq > utsBase + 0.01) {
             const why = []; if (LP > PRESS.LP0) why.push(`선압 ${lineLoad} ton/cm`); if (isUltraLoading) why.push('초고로딩');
@@ -333,7 +331,7 @@
         }
         // 항복강도
         specs.push({ name:'항복강도 (YS)', applied:`~ ${ys.toFixed(1)} kgf/mm² (≈${ysN.toFixed(0)} N/mm², YS/UTS≈${ysRat.toFixed(2)})`, changed:false,
-            note:`요구 UTS ${utsReq.toFixed(1)} 기준 항복강도 — 공정 장력이 이 값 아래여야 안전` });
+            note:`요구 UTS ${utsReq.toFixed(1)} kgf/mm² 기준 항복강도 (YS/UTS≈${ysRat.toFixed(2)})` });
         // 연신율 (Foil Baseline / 선압·가혹 요구)
         if (elReqV > elBase + 0.01) {
             const why = []; if (LP > PRESS.LP0) why.push(`선압 ${lineLoad} ton/cm`); if (edgeTier === 'severe') why.push('극가혹');
@@ -345,9 +343,6 @@
         }
         // 균일연신
         specs.push({ name:'균일연신 (UTS점)', applied:`~ ${uEl.toFixed(1)} %`, changed:false, note:'≈0.72·총연신 (Considère 근사) — 압밀 시 conform 한계' });
-        // 공정 장력 안전여유
-        specs.push({ name:'공정 장력 안전여유', applied:`<span class="feas-badge" style="background:${tenState.c}">${tenState.t}</span> (장력 ${procTen} N/mm² = YS의 ${tenPct.toFixed(0)}%)`, changed:false, raw:true,
-            note:`σ_proc ${procTen} N/mm² / YS ${ysN.toFixed(0)} N/mm²(=${ys.toFixed(1)} kgf/mm²). 권장 운전장력 ≤ YS의 15~25%` });
         // SS-curve 적합성
         specs.push({ name:'SS-curve 적합성', applied:`<span class="feas-badge" style="background:${feas.color}">${feas.label}</span>`, raw:true,
             note: elevated ? `요구(EL ${elReqV.toFixed(1)}% / UTS ${utsReq.toFixed(1)}) vs 표준 Foil 트레이드오프 → 여유 ${margin>=0?'+':''}${margin}%p` : `요구가 Baseline Foil 물성 이내 — 표준 grade로 충족` });
