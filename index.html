@@ -122,7 +122,7 @@
         </div>
         <ul class="factor-list" id="factorList"></ul>
 
-        <h2>2. 수율 연동 맞춤형 스펙 가이드 (메탈·압하율·SS-curve 기반)</h2>
+        <h2>2. 수율 연동 맞춤형 스펙 가이드 (Foil Baseline·Roll Press 선압·SS-curve)</h2>
         <div class="curve-wrap">
             <div id="ssCurve"></div>
             <div class="curve-legend" id="curveLegend"></div>
@@ -142,23 +142,26 @@
 
 <script>
     // ===== 문헌 기반 메탈 가공경화 / 연성 / 항복비 모델 (상수만 수정하면 보정 가능) =====
-    // UTS(MPa) = sigSat - (sigSat - sigAnn)·exp(-kP·P)   (포화형 가공경화; P = 압연 선압[톤])
-    // EL(%)    = elFloor + (elAnn - elFloor)·exp(-dP·P)  (선압 증가에 따른 연성 감쇠)
-    // YS/UTS   = ysA - ysB·exp(-ysMP·P)                  (저선압 0.30 → 고선압 0.7~0.9 상승)
-    // 앵커: 선압 250톤 ≈ UTS 28 kgf/mm², EL 2.7%, YS/UTS 0.70 (Pref; 제공 SS-curve 정합)
-    const WH = {
-        sigAnn: 90, sigSat: 320, kP: 0.006488,   // 톤당 가공경화율 (250톤→UTS 28 kgf/mm² 앵커)
-        elFloor: 1.5, elAnn: 35, dP: 0.013318,
-        ysA: 0.85, ysB: 0.55, ysMP: 0.005197,
-        kgf: 9.807, Pref: 250                     // 1 kgf/mm² = 9.807 MPa ; 기준 선압[톤]
+    // ===== Foil 고유 물성 Baseline (Foil grade/temper로 결정 — Roll Press 선압과 무관) =====
+    // 제공 실측 SS-curve 기준 표준 배터리 Foil: UTS≈28 kgf/mm², EL≈2.7%, YS/UTS≈0.70
+    const FOIL = {
+        utsBase: 28.0,    // kgf/mm² (27~28 중앙값)
+        elBase: 2.7,      // % (총 연신율)
+        ysRatio: 0.70,    // YS/UTS
+        uElRatio: 0.72,   // 균일연신 / 총연신
+        envSlope: 0.5,    // SS-curve 트레이드오프: 요구 UTS 1 kgf↑당 달성가능 EL %p↓
+        kgf: 9.807        // 1 kgf/mm² = 9.807 MPa (= N/mm²)
     };
-    function utsKgf(P) { return (WH.sigSat - (WH.sigSat - WH.sigAnn) * Math.exp(-WH.kP * P)) / WH.kgf; }
-    function elFromP(P) { return WH.elFloor + (WH.elAnn - WH.elFloor) * Math.exp(-WH.dP * P); }
-    function ysRatioP(P) { return WH.ysA - WH.ysB * Math.exp(-WH.ysMP * P); }
-    function pForUTSkgf(u) { // UTS(kgf) 달성에 필요한 압연 선압[톤] (역산)
-        const x = (WH.sigSat - u * WH.kgf) / (WH.sigSat - WH.sigAnn);
-        return x <= 0 ? 99999 : -Math.log(x) / WH.kP;
-    }
+    // ===== 전극 Roll Press(캘린더링) 선압 → 요구 스펙 demand (선압밀도 ton/cm) =====
+    // 선압↑ → 전극 압밀 시 Foil이 합제와 함께 늘어나야 함 → 필요 연신율·인장강도↑, 핀홀/Edge 크랙 리스크↑
+    const PRESS = {
+        LP0: 1.0,         // ton/cm: 표준 캘린더링 기준 (이하 추가 요구 없음)
+        LPsevere: 2.0,    // ton/cm: 이상이면 가혹 (Edge 크랙·핀홀 리스크 급증)
+        dEL: 0.6,         // ton/cm 초과분당 필요 연신율 +%p (합제 conform)
+        dUTS: 1.5         // ton/cm 초과분당 필요 인장강도 +kgf/mm²
+    };
+    // 표준 Foil이 특정 UTS로 temper될 때 달성 가능한 연신율 (SS-curve 트레이드오프 envelope)
+    function elEnvelope(uts) { return FOIL.elBase + FOIL.envSlope * (FOIL.utsBase - uts); }
     // 실측 예시 SS-curve (디지타이즈) — 그래프 표시용
     const REFCURVE = [[0,0],[0.1,7],[0.2,13.5],[0.3,18],[0.4,20],[0.5,21.5],[0.7,23.5],[1.0,26],[1.3,27.5],[1.6,28.7],[2.0,29.5],[2.5,30],[2.85,30]];
 
@@ -221,7 +224,7 @@
         const isThin = (thickness === 15 || thickness === 13.5);
         const is12   = (thickness === 12);
         const isMulti = (pattern === '다열');
-        const P = Math.max(lineLoad, 0); // 압연 선압[톤]
+        const LP = Math.max(lineLoad, 0); // Roll Press(캘린더링) 선압 [ton/cm]
 
         // ===== 1. 가공비 (기존 비용 로직 — 변경 없음) =====
         const baseFee = is12 ? 2.54 : 2.38;
@@ -253,39 +256,42 @@
         }
         const totalCost = lmePrice + fee;
 
-        // ===== 2. 메탈 물성 산출 (문헌 기반, 압연 선압 구동) =====
-        const utsCap = utsKgf(P);            // 선압 기반 인장강도 (capability)
-        const elCap  = elFromP(P);           // 선압 기반 총 연신율
-        const ysRat  = ysRatioP(P);          // 항복비
-        const ys     = ysRat * utsCap;       // 항복강도 (kgf/mm²)
-        const ysN    = ys * WH.kgf;          // 항복강도 (N/mm²)
-        const uEl    = Math.max(0.5, elCap * 0.72); // 균일연신 ≈ 0.72·총연신 (Considère 근사)
+        // ===== 2. 물성 산출 : Foil Baseline(고정) + Roll Press 선압 demand =====
+        const utsBase = FOIL.utsBase;        // Foil 고유 인장강도 (grade로 결정)
+        const elBase  = FOIL.elBase;         // Foil 고유 총 연신율
 
-        // 공정 요구 (수율 로직과 정합): 초고로딩 → UTS≥29, 극가혹 → EL≥3.0
-        const utsReq = isUltraLoading ? Math.max(29, utsCap) : utsCap;
-        const elReqV = (edgeTier === 'severe') ? Math.max(3.0, elCap) : elCap;
-        const elevated = (utsReq > utsCap + 0.01) || (elReqV > elCap + 0.01);
+        // Roll Press 선압(ton/cm)에 따른 요구 상향 (LP0 초과분에 비례)
+        const excess  = Math.max(0, LP - PRESS.LP0);
+        const utsReqPress = utsBase + PRESS.dUTS * excess;
+        const elReqPress  = elBase  + PRESS.dEL  * excess;
+        // 공정 요구 통합: 선압 demand + 초고로딩(UTS≥29) + 극가혹(EL≥3.0)
+        const utsReq = Math.max(utsReqPress, isUltraLoading ? 29 : 0);
+        const elReqV = Math.max(elReqPress, (edgeTier === 'severe') ? 3.0 : 0);
+        const elevated = (utsReq > utsBase + 0.01) || (elReqV > elBase + 0.01);
 
-        // SS-curve 적합성: 요구 UTS 달성에 필요한 선압에서의 연성 vs 요구 연신
-        const pNeed = pForUTSkgf(utsReq);
-        const elPoss = elFromP(Math.min(pNeed, 9999));
-        const margin = +(elPoss - elReqV).toFixed(2);
+        // 요구를 충족할 Foil의 YS (요구 UTS 기준), 균일연신
+        const ysRat = FOIL.ysRatio;
+        const ys    = ysRat * utsReq;        // kgf/mm²
+        const ysN   = ys * FOIL.kgf;         // N/mm²
+        const uEl   = Math.max(0.5, elReqV * FOIL.uElRatio);
+
+        // 적합성: 요구점(UTS_req, EL_req)이 표준 Foil 트레이드오프 envelope 내인가
+        const elEnv  = elEnvelope(utsReq);
+        const margin = +(elEnv - elReqV).toFixed(2);
         let feas;
-        if (!elevated)            feas = { color:'#27ae60', label:'선압–물성 정합 (표준 메탈 단독 달성)' };
-        else if (pNeed > 800)     feas = { color:'#e74c3c', label:'압연 선압 한계 초과 → 특수 합금 필수' };
-        else if (margin >= 0.3)   feas = { color:'#27ae60', label:'표준 메탈 영역 (달성 여유)' };
-        else if (margin >= 0)     feas = { color:'#f39c12', label:'표준 한계 근접 (청정도·temper 정밀관리)' };
+        if (!elevated)            feas = { color:'#27ae60', label:'Baseline Foil 충족 (요구 ≤ 표준 물성)' };
+        else if (margin >= 0.3)   feas = { color:'#27ae60', label:'표준 Foil grade 상향으로 달성 가능' };
+        else if (margin >= 0)     feas = { color:'#f39c12', label:'표준 한계 근접 (고grade·정밀 temper 필요)' };
         else                      feas = { color:'#e74c3c', label:'강도–연신 동시충족 불가 → 특수 합금/열처리' };
 
         // 공정 장력 안전여유 (장력 N/mm² vs YS N/mm²)
         const tenPct = ysN > 0 ? (procTen / ysN * 100) : 0;
         let tenState = tenPct <= 15 ? {c:'#27ae60', t:'안전'} : (tenPct <= 25 ? {c:'#f39c12', t:'주의'} : {c:'#e74c3c', t:'위험(소성/네킹 우려)'});
 
-        // 핀홀 리스크: 선압→등가 냉간가공량 환산, MDPI 면적 피크 ~50% + 박물 민감도
-        const xEff = 1 - Math.exp(-WH.kP * P);                  // 등가 냉간가공 분율 (0~1)
-        const riskRed = Math.exp(-Math.pow((xEff - 0.5)/0.18, 2)); // 50%에서 1.0
+        // 핀홀 리스크: Roll Press 선압 압밀 응력(단조 증가) + 박물 민감도
+        const lpN = Math.min(Math.max(LP / 2.5, 0), 1);        // 선압 정규화 (2.5 ton/cm ~ 고가혹)
         const thinF = Math.min(Math.max((16 - thickness)/8, 0), 1);
-        const phIdx = Math.round(100 * Math.min(Math.max(0.7*riskRed + 0.3*thinF, 0), 1));
+        const phIdx = Math.round(100 * Math.min(Math.max(0.6*lpN + 0.4*thinF, 0), 1));
         const phLevel = phIdx > 55 ? '높음' : (phIdx > 25 ? '보통' : '낮음');
 
         // ===== 섹션 1 출력 =====
@@ -307,45 +313,48 @@
         document.getElementById('curveLegend').innerHTML =
             `<div><span class="swatch" style="background:#3498db"></span>실측 예시 SS-curve (메탈 기준)</div>`
           + `<div><span class="swatch" style="background:${feas.color}"></span>요구 운전점 (EL ${elReqV.toFixed(1)}% / UTS ${utsReq.toFixed(1)} kgf/mm²)</div>`
-          + `<div style="margin-top:6px">선압 <b>${lineLoad}톤</b> → 산출 UTS <b>${utsCap.toFixed(1)}</b> · EL <b>${elCap.toFixed(1)}%</b> · YS <b>${ys.toFixed(1)}</b></div>`
+          + `<div style="margin-top:6px">Foil Baseline: UTS <b>${utsBase.toFixed(1)}</b> · EL <b>${elBase.toFixed(1)}%</b> · YS <b>${(FOIL.ysRatio*utsBase).toFixed(1)}</b> (grade 고유)</div>`
+          + `<div style="margin-top:6px">Roll Press <b>${lineLoad} ton/cm</b> → 요구 UTS <b>${utsReq.toFixed(1)}</b> · EL <b>${elReqV.toFixed(1)}%</b></div>`
           + `<div style="margin-top:6px">적합성: <span class="feas-badge" style="background:${feas.color}">${feas.label}</span></div>`
-          + (elevated ? `<div class="note" style="margin-top:6px">요구 UTS 달성 필요 선압 ≈ ${pNeed>800?'>800':pNeed.toFixed(0)}톤 → 그 지점 연성 ${elPoss.toFixed(1)}% vs 요구 ${elReqV.toFixed(1)}% (여유 ${margin>=0?'+':''}${margin}%p)</div>` : '');
+          + (elevated ? `<div class="note" style="margin-top:6px">표준 Foil 한계연신 @UTS ${utsReq.toFixed(1)} = ${elEnv.toFixed(1)}% vs 요구 ${elReqV.toFixed(1)}% (여유 ${margin>=0?'+':''}${margin}%p)</div>` : '');
 
         const specs = [];
         specs.push({ name:'두께', applied:`${thickness} µm`, note:'선택 두께' });
-        specs.push({ name:'압연 선압', applied:`${lineLoad} 톤`, note:'가공경화·연성·핀홀 산출 입력 (선압↑→UTS↑·연신↓)' });
+        specs.push({ name:'Roll Press 선압', applied:`${lineLoad} ton/cm`, note:`전극 캘린더링 부하. 표준 ${PRESS.LP0} 초과분에 비례해 필요 연신율·인장강도↑ (요구 인자)` });
 
-        // 인장강도
-        if (isUltraLoading && utsReq > utsCap + 0.01) {
-            specs.push({ name:'인장강도 (UTS)', applied:`≥ ${utsReq.toFixed(0)} kgf/mm² (요구) · 산출 ${utsCap.toFixed(1)}`, changed:true,
-                note:`가공경화식 σ=σs−(σs−σ0)e^(−kP·선압) 산출 ${utsCap.toFixed(1)} kgf/mm². 초고로딩 요구 ${utsReq.toFixed(0)}는 선압 ${pNeed>800?'>800':pNeed.toFixed(0)}톤 필요` });
+        // 인장강도 (Foil Baseline / 선압·로딩 요구)
+        if (utsReq > utsBase + 0.01) {
+            const why = []; if (LP > PRESS.LP0) why.push(`선압 ${lineLoad} ton/cm`); if (isUltraLoading) why.push('초고로딩');
+            specs.push({ name:'인장강도 (UTS)', applied:`≥ ${utsReq.toFixed(1)} kgf/mm² (요구) · Baseline ${utsBase.toFixed(0)}`, changed:true,
+                note:`Foil 고유 ${utsBase.toFixed(0)} kgf/mm². ${why.join(' / ')}로 압밀 응력 대비 ${utsReq.toFixed(1)} kgf/mm²(≈${(utsReq*FOIL.kgf).toFixed(0)} MPa) 요구` });
         } else {
-            specs.push({ name:'인장강도 (UTS)', applied:`~ ${utsCap.toFixed(1)} kgf/mm² (≈${(utsCap*WH.kgf).toFixed(0)} MPa)`, changed:false,
-                note:`가공경화식 σ=σs−(σs−σ0)e^(−kP·선압), 선압 ${lineLoad}톤 적용` });
+            specs.push({ name:'인장강도 (UTS)', applied:`~ ${utsBase.toFixed(0)} kgf/mm² (≈${(utsBase*FOIL.kgf).toFixed(0)} MPa)`, changed:false,
+                note:`Foil grade 고유 물성. 현 선압 ${lineLoad} ton/cm에서 추가 강도 요구 없음` });
         }
         // 항복강도
         specs.push({ name:'항복강도 (YS)', applied:`~ ${ys.toFixed(1)} kgf/mm² (≈${ysN.toFixed(0)} N/mm², YS/UTS≈${ysRat.toFixed(2)})`, changed:false,
-            note:`선압에 따른 항복비 (저선압 0.30 → 고선압 상승). 가공경화 여유 ≈ ${(100*(1-ysRat)).toFixed(0)}%` });
-        // 연신율
-        if (edgeTier === 'severe' && elReqV > elCap + 0.01) {
-            specs.push({ name:'연신율 (총)', applied:`≥ ${elReqV.toFixed(1)}% (요구) · 산출 ${elCap.toFixed(1)}%`, changed:true,
-                note:`연성 감쇠식 EL=EL_f+(EL_0−EL_f)e^(−dP·선압) 산출 ${elCap.toFixed(1)}%. 고응력 캘린더링 conform 위해 ≥3.0% 요구` });
+            note:`요구 UTS ${utsReq.toFixed(1)} 기준 항복강도 — 공정 장력이 이 값 아래여야 안전` });
+        // 연신율 (Foil Baseline / 선압·가혹 요구)
+        if (elReqV > elBase + 0.01) {
+            const why = []; if (LP > PRESS.LP0) why.push(`선압 ${lineLoad} ton/cm`); if (edgeTier === 'severe') why.push('극가혹');
+            specs.push({ name:'연신율 (총)', applied:`≥ ${elReqV.toFixed(1)}% (요구) · Baseline ${elBase.toFixed(1)}%`, changed:true,
+                note:`Foil 고유 ${elBase.toFixed(1)}%. ${why.join(' / ')}로 합제와 함께 늘어나 파단 방지 위해 ${elReqV.toFixed(1)}% 요구` });
         } else {
-            specs.push({ name:'연신율 (총)', applied:`~ ${elCap.toFixed(1)} %`, changed:false,
-                note:`연성 감쇠식 EL=EL_f+(EL_0−EL_f)e^(−dP·선압), 선압 ${lineLoad}톤 적용` });
+            specs.push({ name:'연신율 (총)', applied:`~ ${elBase.toFixed(1)} %`, changed:false,
+                note:`Foil grade 고유 물성. 현 선압 ${lineLoad} ton/cm에서 추가 연신 요구 없음` });
         }
         // 균일연신
-        specs.push({ name:'균일연신 (UTS점)', applied:`~ ${uEl.toFixed(1)} %`, changed:false, note:'≈0.72·총연신 (Considère 근사) — 압연 conform 한계' });
+        specs.push({ name:'균일연신 (UTS점)', applied:`~ ${uEl.toFixed(1)} %`, changed:false, note:'≈0.72·총연신 (Considère 근사) — 압밀 시 conform 한계' });
         // 공정 장력 안전여유
         specs.push({ name:'공정 장력 안전여유', applied:`<span class="feas-badge" style="background:${tenState.c}">${tenState.t}</span> (장력 ${procTen} N/mm² = YS의 ${tenPct.toFixed(0)}%)`, changed:false, raw:true,
             note:`σ_proc ${procTen} N/mm² / YS ${ysN.toFixed(0)} N/mm²(=${ys.toFixed(1)} kgf/mm²). 권장 운전장력 ≤ YS의 15~25%` });
         // SS-curve 적합성
         specs.push({ name:'SS-curve 적합성', applied:`<span class="feas-badge" style="background:${feas.color}">${feas.label}</span>`, raw:true,
-            note: elevated ? `요구(EL ${elReqV.toFixed(1)}% / UTS ${utsReq.toFixed(1)}) vs 선압 트레이드오프 → 여유 ${margin>=0?'+':''}${margin}%p` : `현 선압에서 강도·연성이 자체 정합` });
+            note: elevated ? `요구(EL ${elReqV.toFixed(1)}% / UTS ${utsReq.toFixed(1)}) vs 표준 Foil 트레이드오프 → 여유 ${margin>=0?'+':''}${margin}%p` : `요구가 Baseline Foil 물성 이내 — 표준 grade로 충족` });
 
         // 핀홀 - 코팅부
         specs.push({ name:'핀홀 (코팅부/전체)', applied:'500 µm 이하', changed:false,
-            note:`Baseline · ${cleanGrade(500)} · 핀홀 리스크 ${phLevel}(${phIdx}/100): 선압 ${lineLoad}톤(등가 냉간가공 ${(xEff*100).toFixed(0)}%, 면적 피크 ~50% 대비), 박물 민감도 반영` });
+            note:`Baseline(Foil 제조 규격) · ${cleanGrade(500)} · 핀홀/크랙 리스크 ${phLevel}(${phIdx}/100): Roll Press 선압 ${lineLoad} ton/cm 압밀 응력 + 박물 민감도` });
         // 핀홀 - 무지부(Edge)
         const baseEdge = is12 ? '200 µm 이하 (Edge 20mm)' : '별도 규제 없음';
         let edgeApplied, edgeChanged=false, edgeRelaxed=false, edgeUm, edgeNote;
@@ -372,28 +381,29 @@
         });
 
         document.getElementById('refs').innerHTML =
-            `<b>산출 근거 (문헌):</b><br>`
-          + `• 냉간 가공경화·연성 트레이드오프(어닐 YS 27→75% 압하 125 MPa, 강도↑·연성↓ 포화 거동): `
-          + `<a href="https://www.totalmateria.com/en-us/articles/work-hardening-aluminum-alloys-2" target="_blank">Total Materia, Work Hardening of Al</a>, 1100 O 90 / H18 150 MPa(공급사 데이터시트)<br>`
-          + `• 핀홀 면적 압하율 ~50%에서 피크 후 감소, 입자/모재 정합 손실 기구: `
+            `<b>산출 근거 (문헌·모델):</b><br>`
+          + `• Foil 고유 물성(UTS/EL/YS)은 Foil temper(냉간 가공경화)로 결정 — 강도↑·연성↓ 트레이드오프: `
+          + `<a href="https://www.totalmateria.com/en-us/articles/work-hardening-aluminum-alloys-2" target="_blank">Total Materia, Work Hardening of Al</a> (1100 O 90 / H18 150 MPa, 공급사 데이터)<br>`
+          + `• 핀홀 Baseline은 Foil 제조 단계 결함(입자/모재 정합 손실): `
           + `<a href="https://www.mdpi.com/2079-6412/15/4/472" target="_blank">Coatings 2025, 15(4), 472 (MDPI)</a><br>`
-          + `• 균일연신 ≈ Considère 기준, 공정 장력 ≤ YS의 15~25% (웹핸들링 권장). UTS·연신은 압연 선압[톤]으로 산출하며 핀홀은 선압→등가 냉간가공량 환산. 모델 상수는 제공 SS-curve로 보정.`;
+          + `• <b>Roll Press(캘린더링) 선압[ton/cm]</b>은 전극 압밀 시 Foil이 받는 부하 → 합제 conform 위한 필요 연신율·인장강도↑, 핀홀/Edge 크랙 리스크↑ (요구 인자). 공정 장력 ≤ YS의 15~25%(웹핸들링), 균일연신≈Considère. demand 상수(LP0·dEL·dUTS)는 공정 실측으로 보정.`;
 
         // ===== 섹션 3 =====
         const upFactors = factors.filter(f=>f.dir==='up'); const downFactors = factors.filter(f=>f.dir==='down');
         let comment='';
         if (!upFactors.length) {
-            comment = `<p>현재 조건(로딩량 ${loadingMg} mg/25cm² · 기공도 ${porosity}% · 속도 ${speed} m/min · 선압 ${lineLoad}톤)은 Baseline 표준 범위이며, 산출 물성도 SS-curve 상 <b>${feas.label}</b>으로 수율 부담이 낮은 <b>최적 구간</b>입니다.</p>`;
+            comment = `<p>현재 조건(로딩량 ${loadingMg} mg/25cm² · 기공도 ${porosity}% · 속도 ${speed} m/min · Roll Press 선압 ${lineLoad} ton/cm)은 Baseline 범위이며, 요구 물성도 <b>${feas.label}</b>으로 수율 부담이 낮은 <b>최적 구간</b>입니다.</p>`;
             if (downFactors.length) comment += `<p>저가혹 운전으로 <span class="down">가공비 절감(−$0.15/kg)</span> 여지가 있습니다.</p>`;
         } else {
             const top = upFactors.reduce((a,b)=>(b.amt>a.amt?b:a));
             comment += `<p>협력사 수율을 가장 크게 잠식하는 핵심 인자는 <span class="driver">${top.text} (+$${top.amt.toFixed(2)}/kg)</span> 입니다.</p>`;
-            if (feas.color !== '#27ae60') comment += `<p>또한 요구 물성이 선압 트레이드오프 상 <b style="color:${feas.color}">${feas.label}</b>(여유 ${margin>=0?'+':''}${margin}%p)이라, 강도·연신 동시 충족의 <b>야금학적 부담</b>이 큽니다.</p>`;
+            if (feas.color !== '#27ae60') comment += `<p>또한 Roll Press 선압이 요구하는 물성이 표준 Foil 트레이드오프 상 <b style="color:${feas.color}">${feas.label}</b>(여유 ${margin>=0?'+':''}${margin}%p)이라, 강도·연신 동시 충족의 <b>야금학적 부담</b>이 큽니다.</p>`;
             const tips=[];
             if (isMulti) tips.push('<b>다열 패턴(+$0.50):</b> 슬리팅 스크랩이 최대 인자. 레인 피치 확대/단일 전환, Crown 허용편차 합리화.');
-            if (isUltraLoading) tips.push(`<b>초고로딩(+$0.40):</b> 로딩량 625 mg/25cm² 미만이면 UTS≥29 요구가 풀려 선압 여유 확보, 표준 메탈 사용 가능.`);
+            if (isUltraLoading) tips.push(`<b>초고로딩(+$0.40):</b> 로딩량 625 mg/25cm² 미만이면 UTS≥29 요구가 풀려 표준 Foil 사용 가능.`);
             if (edgeTier === 'severe') { const fix=[]; if(porosity<=22) fix.push('기공도 24% 수준 타협(>22%)'); if(speed>=80) fix.push('속도 80 미만 조정'); tips.push(`<b>Edge 가혹(+$0.30):</b> ${fix.join(' 및 ')} 시 핀홀 100µm·연신율 상향 요구 해소.`); }
-            if (feas.color !== '#27ae60') tips.push('<b>SS-curve 여유:</b> 강도·연신 동시 요구가 압연 트레이드오프를 벗어나면, 고청정 용탕·미세 결정립(특수 합금)으로 곡선 자체를 우상향시키는 grade 협의 필요.');
+            if (LP > PRESS.LP0 && feas.color !== '#27ae60') tips.push(`<b>Roll Press 선압(${lineLoad} ton/cm):</b> 선압을 ${PRESS.LP0} ton/cm 수준으로 낮추면(목표 기공도 완화) 필요 연신율·인장강도가 줄어 표준 Foil로 충족 가능 — 단, 전극 밀도 목표와 트레이드오프.`);
+            if (feas.color !== '#27ae60') tips.push('<b>Foil grade 상향:</b> 강도·연신 동시 요구가 표준 Foil 트레이드오프를 벗어나면, 고청정 용탕·미세 결정립(특수 합금)으로 SS-curve를 우상향시키는 grade 협의 필요.');
             if (tenPct > 25) tips.push(`<b>공정 장력(${tenPct.toFixed(0)}% of YS):</b> 운전장력을 YS의 15~25% 이하로 낮춰 소성변형·사행 리스크 완화.`);
             comment += `<p style="margin-top:10px"><b>💡 가공비 방어(Cost-down) 엔지니어링 대안</b></p><ul>`;
             tips.forEach(t=>comment+=`<li>${t}</li>`); comment+=`</ul>`;
