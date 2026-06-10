@@ -55,11 +55,12 @@
     <div class="form-grid">
         <div class="form-group">
             <label for="lmePrice">LME 시세 (USD/kg)</label>
-            <input type="number" id="lmePrice" value="2.50" step="0.01">
+            <input type="number" id="lmePrice" step="0.01" placeholder="N/A">
         </div>
         <div class="form-group">
             <label for="foilThickness">Al 포일 두께</label>
             <select id="foilThickness">
+                <option value="" selected>N/A (선택)</option>
                 <option value="15">15 µm</option>
                 <option value="13.5">13.5 µm</option>
                 <option value="12">12 µm</option>
@@ -67,39 +68,42 @@
         </div>
         <div class="form-group">
             <label for="loadingMg">양극재 로딩량 (mg/25cm²)</label>
-            <input type="number" id="loadingMg" value="500" placeholder="예: 375, 500, 650">
+            <input type="number" id="loadingMg" placeholder="N/A (예: 375, 500, 650)">
             <span class="hint">초고로딩 기준 ≥ 625 (15 mg/cm²=375 / 25 mg/cm²=625)</span>
         </div>
         <div class="form-group">
             <label for="porosity">전극 Porosity (%)</label>
-            <input type="number" id="porosity" value="28" step="0.1" placeholder="예: 20, 28, 32">
+            <input type="number" id="porosity" step="0.1" placeholder="N/A (예: 20, 28, 32)">
             <span class="hint">극가혹 ≤ 22% / 완화 ≥ 30%</span>
         </div>
         <div class="form-group">
             <label for="coatingSpeed">전극 코팅 속도 (m/min)</label>
-            <input type="number" id="coatingSpeed" value="50" placeholder="예: 40, 80, 120">
+            <input type="number" id="coatingSpeed" placeholder="N/A (예: 40, 80, 120)">
             <span class="hint">극가혹 ≥ 80 / 완화 ≤ 40</span>
         </div>
         <div class="form-group">
             <label for="pattern">코팅 패턴</label>
             <select id="pattern">
+                <option value="" selected>N/A (선택)</option>
                 <option value="단일">단일 패턴 (Single Lane)</option>
                 <option value="다열">다열 패턴 (Multi / Stripe)</option>
             </select>
         </div>
         <div class="form-group">
             <label for="reductionPct">최종 냉간 압하율 (%)</label>
-            <input type="number" id="reductionPct" value="85" step="1" placeholder="예: 50, 80, 92">
+            <input type="number" id="reductionPct" step="1" placeholder="N/A (예: 50, 80, 92)">
             <span class="hint">가공경화(UTS↑)·연신율(↓) 산출의 핵심 변수</span>
         </div>
         <div class="form-group">
             <label for="webTension">가공 웹 텐션 (kgf/mm²)</label>
-            <input type="number" id="webTension" value="5" step="0.1" placeholder="단면 응력 기준">
+            <input type="number" id="webTension" step="0.1" placeholder="N/A (단면 응력 기준)">
             <span class="hint">YS 대비 안전여유 평가 (권장 ≤ YS의 15~25%)</span>
         </div>
     </div>
 
     <button onclick="calculateSpec()">동적 스펙 및 예상 원가 산출</button>
+
+    <div id="inputNotice" style="display:none; margin-top:14px; padding:12px 16px; background:#fdf2f1; border-left:5px solid #e74c3c; border-radius:4px; color:#c0392b; font-weight:600;"></div>
 
     <div id="outputSection" class="output-section">
 
@@ -178,14 +182,34 @@
     }
 
     function calculateSpec() {
-        const lmePrice  = parseFloat(document.getElementById('lmePrice').value) || 0;
+        // --- 입력 검증: 미입력(N/A) 항목이 있으면 산출 중단 ---
+        const required = [
+            ['lmePrice','LME 시세'], ['foilThickness','Al 포일 두께'], ['loadingMg','양극재 로딩량'],
+            ['porosity','전극 Porosity'], ['coatingSpeed','코팅 속도'], ['pattern','코팅 패턴'],
+            ['reductionPct','냉간 압하율'], ['webTension','웹 텐션']
+        ];
+        const missing = required.filter(([id]) => {
+            const v = document.getElementById(id).value;
+            return v === '' || v === null;
+        }).map(x => x[1]);
+        const notice = document.getElementById('inputNotice');
+        if (missing.length) {
+            notice.style.display = 'block';
+            notice.innerText = '⚠ 다음 항목이 N/A입니다. 입력 후 다시 산출하세요: ' + missing.join(', ');
+            document.getElementById('outputSection').style.display = 'none';
+            notice.scrollIntoView({ behavior: 'smooth' });
+            return;
+        }
+        notice.style.display = 'none';
+
+        const lmePrice  = parseFloat(document.getElementById('lmePrice').value);
         const thickness = parseFloat(document.getElementById('foilThickness').value);
-        const loadingMg = parseFloat(document.getElementById('loadingMg').value) || 0;
-        const porosity  = parseFloat(document.getElementById('porosity').value) || 0;
-        const speed     = parseInt(document.getElementById('coatingSpeed').value) || 0;
+        const loadingMg = parseFloat(document.getElementById('loadingMg').value);
+        const porosity  = parseFloat(document.getElementById('porosity').value);
+        const speed     = parseInt(document.getElementById('coatingSpeed').value);
         const pattern   = document.getElementById('pattern').value;
-        let   rPct      = parseFloat(document.getElementById('reductionPct').value); if (isNaN(rPct)) rPct = 85;
-        const webTen    = parseFloat(document.getElementById('webTension').value) || 0;
+        const rPct      = parseFloat(document.getElementById('reductionPct').value);
+        const webTen    = parseFloat(document.getElementById('webTension').value);
 
         const isThin = (thickness === 15 || thickness === 13.5);
         const is12   = (thickness === 12);
