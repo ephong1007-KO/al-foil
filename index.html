@@ -5,134 +5,52 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Al Foil SS-curve 연동 동적 스펙 & 원가 산출기</title>
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f4f7f6;
-            color: #333;
-            margin: 0;
-            padding: 20px;
-        }
-        .container {
-            max-width: 1000px;
-            margin: auto;
-            background: #fff;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        }
-        h1, h2 {
-            color: #2c3e50;
-            border-bottom: 2px solid #3498db;
-            padding-bottom: 10px;
-            margin-bottom: 20px;
-        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; color: #333; margin: 0; padding: 20px; }
+        .container { max-width: 1000px; margin: auto; background: #fff; padding: 30px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        h1, h2 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; margin-bottom: 20px; }
         h2 { margin-top: 35px; font-size: 20px; }
         .subtitle { color: #7f8c8d; margin-bottom: 25px; }
-        .form-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 30px; }
         .form-group { display: flex; flex-direction: column; }
         label { font-weight: 600; margin-bottom: 8px; color: #34495e; }
-        input, select {
-            padding: 10px;
-            border: 1px solid #bdc3c7;
-            border-radius: 5px;
-            font-size: 14px;
-        }
-        input:focus, select:focus {
-            outline: none;
-            border-color: #3498db;
-            box-shadow: 0 0 5px rgba(52, 152, 219, 0.5);
-        }
+        input, select { padding: 10px; border: 1px solid #bdc3c7; border-radius: 5px; font-size: 14px; }
+        input:focus, select:focus { outline: none; border-color: #3498db; box-shadow: 0 0 5px rgba(52, 152, 219, 0.5); }
         .hint { font-size: 12px; color: #95a5a6; margin-top: 4px; }
-        button {
-            width: 100%;
-            padding: 15px;
-            background-color: #3498db;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
+        button { width: 100%; padding: 15px; background-color: #3498db; color: white; border: none; border-radius: 5px; font-size: 16px; font-weight: bold; cursor: pointer; transition: background-color 0.3s; }
         button:hover { background-color: #2980b9; }
         .output-section { margin-top: 30px; display: none; }
-        .cost-card {
-            background: linear-gradient(135deg, #1e3c72, #2a5298);
-            color: white;
-            padding: 22px;
-            border-radius: 8px;
-            margin-bottom: 10px;
-            text-align: center;
-        }
+        .cost-card { background: linear-gradient(135deg, #1e3c72, #2a5298); color: white; padding: 22px; border-radius: 8px; margin-bottom: 10px; text-align: center; }
         .cost-card h3 { margin: 0 0 10px 0; font-size: 18px; color: #ecf0f1; }
-        .cost-card .total-cost {
-            font-size: 38px;
-            font-weight: bold;
-            margin: 0;
-            color: #f1c40f;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
-        }
-        .cost-card .formula {
-            font-size: 15px;
-            margin-top: 14px;
-            padding-top: 14px;
-            border-top: 1px solid rgba(255,255,255,0.25);
-            opacity: 0.97;
-            line-height: 1.5;
-        }
+        .cost-card .total-cost { font-size: 38px; font-weight: bold; margin: 0; color: #f1c40f; text-shadow: 1px 1px 2px rgba(0,0,0,0.3); }
+        .cost-card .formula { font-size: 15px; margin-top: 14px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.25); opacity: 0.97; line-height: 1.5; }
         .factor-list { margin: 10px 0 0 0; padding-left: 20px; }
         .factor-list li { margin-bottom: 6px; line-height: 1.5; }
         .up { color: #c0392b; font-weight: bold; }
         .down { color: #1e8449; font-weight: bold; }
         .spec-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        .spec-table th, .spec-table td {
-            border: 1px solid #ddd;
-            padding: 12px;
-            text-align: left;
-            vertical-align: top;
-        }
+        .spec-table th, .spec-table td { border: 1px solid #ddd; padding: 12px; text-align: left; vertical-align: top; }
         .spec-table thead th { background-color: #2c3e50; color: #fff; text-align: center; }
         .spec-table tbody th { background-color: #ecf0f1; font-weight: bold; width: 18%; }
         .changed { font-weight: bold; color: #e74c3c; background-color: #fdf2f1; }
         .relaxed { font-weight: bold; color: #27ae60; background-color: #eafaf1; }
         .note { font-size: 12px; color: #7f8c8d; }
-        .sc-comment {
-            background: #fef9e7;
-            border-left: 5px solid #f1c40f;
-            padding: 18px 22px;
-            border-radius: 4px;
-            line-height: 1.7;
-        }
+        .sc-comment { background: #fef9e7; border-left: 5px solid #f1c40f; padding: 18px 22px; border-radius: 4px; line-height: 1.7; }
         .sc-comment .driver { font-weight: bold; color: #c0392b; }
         .sc-comment ul { margin: 10px 0 0 0; padding-left: 20px; }
-        .curve-wrap {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 20px;
-            align-items: center;
-            background: #fbfcfd;
-            border: 1px solid #e1e6ea;
-            border-radius: 8px;
-            padding: 18px;
-            margin-top: 10px;
-        }
+        .curve-wrap { display: flex; flex-wrap: wrap; gap: 20px; align-items: center; background: #fbfcfd; border: 1px solid #e1e6ea; border-radius: 8px; padding: 18px; margin-top: 10px; }
         .curve-wrap svg { flex: 0 0 auto; }
         .curve-legend { flex: 1 1 240px; font-size: 13px; line-height: 1.7; }
         .curve-legend .swatch { display: inline-block; width: 12px; height: 12px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
         .feas-badge { display: inline-block; padding: 3px 10px; border-radius: 12px; color: #fff; font-weight: bold; font-size: 13px; }
+        .refs { font-size: 12px; color: #7f8c8d; margin-top: 14px; line-height: 1.6; background:#f8f9fa; border-radius:6px; padding:12px 16px; }
+        .refs a { color: #2980b9; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <h1>🔋 양극 전극용 Al Foil SS-curve 연동 동적 스펙 & 원가 산출기</h1>
-    <p class="subtitle">정량적 공정 조건(로딩량·기공도·속도)으로 가혹도를 판단하고, 실측 SS-curve(응력-변형 곡선)에 기반해 인장강도·항복강도·연신율을 물리적으로 일관되게 산출합니다. Baseline 계약 단가 기준 동적 스펙과 가공비(USD/kg)를 함께 제시합니다.</p>
+    <p class="subtitle">정량적 공정 조건(로딩량·기공도·속도)으로 가혹도를 판단하고, 메탈 가공경화 이론(냉간 압하율)·SS-curve·웹 텐션을 문헌 기반으로 적용하여 인장강도·항복강도·연신율·핀홀 스펙을 <b>계산값으로</b> 산출합니다.</p>
 
     <div class="form-grid">
         <div class="form-group">
@@ -150,7 +68,7 @@
         <div class="form-group">
             <label for="loadingMg">양극재 로딩량 (mg/25cm²)</label>
             <input type="number" id="loadingMg" value="500" placeholder="예: 375, 500, 650">
-            <span class="hint">초고로딩 기준 ≥ 625 (참고: 15 mg/cm²=375 / 25 mg/cm²=625)</span>
+            <span class="hint">초고로딩 기준 ≥ 625 (15 mg/cm²=375 / 25 mg/cm²=625)</span>
         </div>
         <div class="form-group">
             <label for="porosity">전극 Porosity (%)</label>
@@ -169,6 +87,16 @@
                 <option value="다열">다열 패턴 (Multi / Stripe)</option>
             </select>
         </div>
+        <div class="form-group">
+            <label for="reductionPct">최종 냉간 압하율 (%)</label>
+            <input type="number" id="reductionPct" value="85" step="1" placeholder="예: 50, 80, 92">
+            <span class="hint">가공경화(UTS↑)·연신율(↓) 산출의 핵심 변수</span>
+        </div>
+        <div class="form-group">
+            <label for="webTension">가공 웹 텐션 (kgf/mm²)</label>
+            <input type="number" id="webTension" value="5" step="0.1" placeholder="단면 응력 기준">
+            <span class="hint">YS 대비 안전여유 평가 (권장 ≤ YS의 15~25%)</span>
+        </div>
     </div>
 
     <button onclick="calculateSpec()">동적 스펙 및 예상 원가 산출</button>
@@ -183,17 +111,18 @@
         </div>
         <ul class="factor-list" id="factorList"></ul>
 
-        <h2>2. 수율 연동 맞춤형 스펙 가이드 (SS-curve 기반 Dynamic Spec)</h2>
+        <h2>2. 수율 연동 맞춤형 스펙 가이드 (메탈·압하율·SS-curve 기반)</h2>
         <div class="curve-wrap">
             <div id="ssCurve"></div>
             <div class="curve-legend" id="curveLegend"></div>
         </div>
         <table class="spec-table">
             <thead>
-                <tr><th>항목</th><th>적용 스펙 (Baseline → 변경)</th><th>비고</th></tr>
+                <tr><th>항목</th><th>산출 스펙</th><th>비고 (산출 근거)</th></tr>
             </thead>
             <tbody id="specBody"></tbody>
         </table>
+        <div class="refs" id="refs"></div>
 
         <h2>3. Supply Chain 및 공정 최적화 코멘트</h2>
         <div class="sc-comment" id="scComment"></div>
@@ -201,21 +130,26 @@
 </div>
 
 <script>
-    // ===== 실측 예시 SS-curve 기반 보정 상수 (필요 시 여기만 수정) =====
-    const CALIB = {
-        ysRatio:      0.70,   // 항복강도/인장강도 비 (예시 곡선 knee≈21 / UTS≈30)
-        utsStd:       30,     // 표준 메탈 UTS plateau (kgf/mm²)
-        elTotalStd:   2.7,    // 표준 총 연신율 (%)
-        elUniformStd: 2.0,    // 균일연신 = UTS 도달 변형률 (%)
-        envSlope:     0.5,    // trade-off envelope 기울기 (%EL per kgf/mm²)
-        utsBase:      28,     // Baseline 대표 UTS (27~28 중앙값)
-        utsUltra:     29,     // 초고로딩 시 요구 UTS (≥29)
-        // 디지타이즈한 표준 SS-curve [Elongation %, Tensile strength kgf/mm²]
-        curve: [[0,0],[0.1,7],[0.2,13.5],[0.3,18],[0.4,20],[0.5,21.5],[0.7,23.5],
-                [1.0,26],[1.3,27.5],[1.6,28.7],[2.0,29.5],[2.5,30],[2.85,30]]
+    // ===== 문헌 기반 메탈 가공경화 / 연성 / 항복비 모델 (상수만 수정하면 보정 가능) =====
+    // UTS(MPa) = sigSat - (sigSat - sigAnn)·exp(-k·r)   (포화형 가공경화; r = 냉간 압하율 분율)
+    // EL(%)    = elFloor + (elAnn - elFloor)·exp(-d·r)   (압하율 증가에 따른 연성 감쇠)
+    // YS/UTS   = ysA - ysB·exp(-ysM·r)                   (어닐 0.30 → 고압하 0.7~0.9 상승)
+    // 앵커: 기본 압하율 85% 부근에서 UTS≈28 kgf/mm², EL≈2.5%, YS/UTS≈0.70 (제공된 실측 SS-curve 정합)
+    const WH = {
+        sigAnn: 90, sigSat: 320, k: 2.04,     // 99.6%Al 어닐 90MPa → H18급 포화 ~320MPa
+        elFloor: 1.5, elAnn: 35, d: 4.16,
+        ysA: 0.85, ysB: 0.55, ysM: 1.62,
+        kgf: 9.807                            // 1 kgf/mm² = 9.807 MPa
     };
-    // 표준 메탈이 특정 UTS에서 낼 수 있는 최대 연신율 (envelope)
-    function elStd(uts) { return CALIB.elTotalStd + CALIB.envSlope * (CALIB.utsStd - uts); }
+    function utsKgf(r) { return (WH.sigSat - (WH.sigSat - WH.sigAnn) * Math.exp(-WH.k * r)) / WH.kgf; }
+    function elFromR(r) { return WH.elFloor + (WH.elAnn - WH.elFloor) * Math.exp(-WH.d * r); }
+    function ysRatioR(r) { return WH.ysA - WH.ysB * Math.exp(-WH.ysM * r); }
+    function rForUTSkgf(u) { // UTS(kgf) 달성에 필요한 압하율 분율 (역산)
+        const x = (WH.sigSat - u * WH.kgf) / (WH.sigSat - WH.sigAnn);
+        return x <= 0 ? 1.5 : -Math.log(x) / WH.k; // >0.98 이면 단독 압연 불가(특수합금 영역)
+    }
+    // 실측 예시 SS-curve (디지타이즈) — 그래프 표시용
+    const REFCURVE = [[0,0],[0.1,7],[0.2,13.5],[0.3,18],[0.4,20],[0.5,21.5],[0.7,23.5],[1.0,26],[1.3,27.5],[1.6,28.7],[2.0,29.5],[2.5,30],[2.85,30]];
 
     function cleanGrade(um) {
         if (um <= 100) return '고청정 (저개재물·정밀 용탕 여과)';
@@ -224,46 +158,23 @@
         return '표준 청정도';
     }
 
-    // ===== SS-curve SVG 렌더 =====
     function renderCurve(elReq, utsReq, feasColor) {
-        const W = 420, H = 300, mL = 48, mR = 15, mT = 15, mB = 42;
-        const pW = W - mL - mR, pH = H - mT - mB;
-        const xMax = 3, yMax = 35;
-        const PX = el  => mL + (el / xMax) * pW;
-        const PY = uts => mT + pH - (uts / yMax) * pH;
-
-        let g = '';
-        // 그리드 + 축 라벨
-        for (let x = 0; x <= 3; x += 0.5) {
-            g += `<line x1="${PX(x)}" y1="${mT}" x2="${PX(x)}" y2="${mT+pH}" stroke="#eef1f3"/>`;
-            g += `<text x="${PX(x)}" y="${mT+pH+15}" font-size="10" fill="#888" text-anchor="middle">${x}</text>`;
-        }
-        for (let y = 0; y <= 35; y += 5) {
-            g += `<line x1="${mL}" y1="${PY(y)}" x2="${mL+pW}" y2="${PY(y)}" stroke="#eef1f3"/>`;
-            g += `<text x="${mL-6}" y="${PY(y)+3}" font-size="10" fill="#888" text-anchor="end">${y}</text>`;
-        }
-        // 축
-        g += `<line x1="${mL}" y1="${mT}" x2="${mL}" y2="${mT+pH}" stroke="#999"/>`;
-        g += `<line x1="${mL}" y1="${mT+pH}" x2="${mL+pW}" y2="${mT+pH}" stroke="#999"/>`;
-        g += `<text x="${mL+pW/2}" y="${H-6}" font-size="11" fill="#555" text-anchor="middle">Elongation [%]</text>`;
-        g += `<text x="14" y="${mT+pH/2}" font-size="11" fill="#555" text-anchor="middle" transform="rotate(-90 14 ${mT+pH/2})">Tensile strength [kgf/mm²]</text>`;
-
-        // 표준 운전 박스 (UTS_std, EL_total_std 기준선)
-        g += `<line x1="${PX(CALIB.elTotalStd)}" y1="${mT}" x2="${PX(CALIB.elTotalStd)}" y2="${mT+pH}" stroke="#bdc3c7" stroke-dasharray="3 3"/>`;
-        g += `<line x1="${mL}" y1="${PY(CALIB.utsStd)}" x2="${mL+pW}" y2="${PY(CALIB.utsStd)}" stroke="#bdc3c7" stroke-dasharray="3 3"/>`;
-
-        // 표준 SS-curve
-        const path = CALIB.curve.map((p,i) => `${i?'L':'M'}${PX(p[0]).toFixed(1)} ${PY(p[1]).toFixed(1)}`).join(' ');
-        g += `<path d="${path}" fill="none" stroke="#3498db" stroke-width="2.5"/>`;
-
-        // 요구 운전점
-        g += `<line x1="${PX(elReq)}" y1="${mT+pH}" x2="${PX(elReq)}" y2="${PY(utsReq)}" stroke="${feasColor}" stroke-dasharray="2 2"/>`;
-        g += `<line x1="${mL}" y1="${PY(utsReq)}" x2="${PX(elReq)}" y2="${PY(utsReq)}" stroke="${feasColor}" stroke-dasharray="2 2"/>`;
-        g += `<circle cx="${PX(elReq)}" cy="${PY(utsReq)}" r="6" fill="${feasColor}" stroke="#fff" stroke-width="1.5"/>`;
-        g += `<text x="${PX(elReq)+9}" y="${PY(utsReq)-8}" font-size="10" fill="${feasColor}" font-weight="bold">요구점</text>`;
-
-        document.getElementById('ssCurve').innerHTML =
-            `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${g}</svg>`;
+        const W=420,H=300,mL=48,mR=15,mT=15,mB=42, pW=W-mL-mR, pH=H-mT-mB, xMax=3, yMax=35;
+        const PX=el=>mL+(el/xMax)*pW, PY=u=>mT+pH-(u/yMax)*pH;
+        let g='';
+        for(let x=0;x<=3;x+=0.5){ g+=`<line x1="${PX(x)}" y1="${mT}" x2="${PX(x)}" y2="${mT+pH}" stroke="#eef1f3"/>`; g+=`<text x="${PX(x)}" y="${mT+pH+15}" font-size="10" fill="#888" text-anchor="middle">${x}</text>`; }
+        for(let y=0;y<=35;y+=5){ g+=`<line x1="${mL}" y1="${PY(y)}" x2="${mL+pW}" y2="${PY(y)}" stroke="#eef1f3"/>`; g+=`<text x="${mL-6}" y="${PY(y)+3}" font-size="10" fill="#888" text-anchor="end">${y}</text>`; }
+        g+=`<line x1="${mL}" y1="${mT}" x2="${mL}" y2="${mT+pH}" stroke="#999"/>`;
+        g+=`<line x1="${mL}" y1="${mT+pH}" x2="${mL+pW}" y2="${mT+pH}" stroke="#999"/>`;
+        g+=`<text x="${mL+pW/2}" y="${H-6}" font-size="11" fill="#555" text-anchor="middle">Elongation [%]</text>`;
+        g+=`<text x="14" y="${mT+pH/2}" font-size="11" fill="#555" text-anchor="middle" transform="rotate(-90 14 ${mT+pH/2})">Tensile strength [kgf/mm²]</text>`;
+        const path=REFCURVE.map((p,i)=>`${i?'L':'M'}${PX(p[0]).toFixed(1)} ${PY(p[1]).toFixed(1)}`).join(' ');
+        g+=`<path d="${path}" fill="none" stroke="#3498db" stroke-width="2.5"/>`;
+        g+=`<line x1="${PX(elReq)}" y1="${mT+pH}" x2="${PX(elReq)}" y2="${PY(utsReq)}" stroke="${feasColor}" stroke-dasharray="2 2"/>`;
+        g+=`<line x1="${mL}" y1="${PY(utsReq)}" x2="${PX(elReq)}" y2="${PY(utsReq)}" stroke="${feasColor}" stroke-dasharray="2 2"/>`;
+        g+=`<circle cx="${PX(elReq)}" cy="${PY(utsReq)}" r="6" fill="${feasColor}" stroke="#fff" stroke-width="1.5"/>`;
+        g+=`<text x="${PX(elReq)+9}" y="${PY(utsReq)-8}" font-size="10" fill="${feasColor}" font-weight="bold">요구점</text>`;
+        document.getElementById('ssCurve').innerHTML=`<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${g}</svg>`;
     }
 
     function calculateSpec() {
@@ -273,190 +184,192 @@
         const porosity  = parseFloat(document.getElementById('porosity').value) || 0;
         const speed     = parseInt(document.getElementById('coatingSpeed').value) || 0;
         const pattern   = document.getElementById('pattern').value;
+        let   rPct      = parseFloat(document.getElementById('reductionPct').value); if (isNaN(rPct)) rPct = 85;
+        const webTen    = parseFloat(document.getElementById('webTension').value) || 0;
 
-        const isThin  = (thickness === 15 || thickness === 13.5);
-        const is12    = (thickness === 12);
+        const isThin = (thickness === 15 || thickness === 13.5);
+        const is12   = (thickness === 12);
         const isMulti = (pattern === '다열');
+        const r = Math.min(Math.max(rPct/100, 0.01), 0.98); // 압하율 분율
 
-        // ===== Baseline 가공비 =====
+        // ===== 1. 가공비 (기존 비용 로직 — 변경 없음) =====
         const baseFee = is12 ? 2.54 : 2.38;
         let fee = baseFee;
         const parts = [{ label: `${thickness}µm 기본`, amount: baseFee, type: 'base' }];
         const factors = [];
 
-        // --- 1. 로딩량 → 인장강도 ---
         const isUltraLoading = (loadingMg >= 625);
         if (isUltraLoading) {
             fee += 0.40; parts.push({ label: '초고로딩(특수 합금/29kgf)', amount: 0.40, type: 'up' });
-            factors.push({ dir: 'up', amt: 0.40,
-                text: `로딩량 ${loadingMg} mg/25cm²(≥625) → 건조/주행 장력 대응 위해 인장강도 ≥29 kgf/mm² 또는 특수 합금 요구` });
+            factors.push({ dir:'up', amt:0.40, text:`로딩량 ${loadingMg} mg/25cm²(≥625) → 건조/주행 장력 대응 위해 인장강도 ≥29 kgf/mm² 또는 특수 합금 요구` });
         }
-
-        // --- 2. 기공도 & 속도 → Edge 핀홀 ---
         let edgeTier = 'standard';
         if (porosity <= 22 || speed >= 80) {
             edgeTier = 'severe';
-            fee += 0.30; parts.push({ label: 'Edge 가혹(핀홀 100µm 강화)', amount: 0.30, type: 'up' });
-            const rs = [];
-            if (porosity <= 22) rs.push(`기공도 ${porosity}%(≤22%)`);
-            if (speed >= 80)    rs.push(`코팅 속도 ${speed} m/min(≥80)`);
-            factors.push({ dir: 'up', amt: 0.30,
-                text: `${rs.join(' 및 ')} → 극한 압연 연신/고속 장력으로 Edge 무지부 핀홀 100µm 이하 절대 강화` });
-            if (isThin) {
-                fee += 0.10; parts.push({ label: '신규 Edge 규격(15/13.5µm)', amount: 0.10, type: 'up' });
-                factors.push({ dir: 'up', amt: 0.10,
-                    text: `15/13.5µm은 본래 무지부 규제가 없으나, 신규 Edge 핀홀 규격(100µm) 요구로 추가 관리 비용 발생` });
-            }
+            fee += 0.30; parts.push({ label:'Edge 가혹(핀홀 100µm 강화)', amount:0.30, type:'up' });
+            const rs=[]; if(porosity<=22) rs.push(`기공도 ${porosity}%(≤22%)`); if(speed>=80) rs.push(`코팅 속도 ${speed} m/min(≥80)`);
+            factors.push({ dir:'up', amt:0.30, text:`${rs.join(' 및 ')} → 극한 압연 연신/고속 장력으로 Edge 무지부 핀홀 100µm 이하 절대 강화` });
+            if (isThin) { fee += 0.10; parts.push({ label:'신규 Edge 규격(15/13.5µm)', amount:0.10, type:'up' });
+                factors.push({ dir:'up', amt:0.10, text:`15/13.5µm은 본래 무지부 규제가 없으나, 신규 Edge 핀홀 규격(100µm) 요구로 추가 관리 비용 발생` }); }
         } else if (porosity >= 30 && speed <= 40) {
             edgeTier = 'loose';
-            fee -= 0.15; parts.push({ label: '저가혹 완화(Edge 300µm 허용)', amount: -0.15, type: 'down' });
-            factors.push({ dir: 'down', amt: 0.15,
-                text: `기공도 ${porosity}%(≥30%) 및 코팅 속도 ${speed} m/min(≤40) → 연신 스트레스 적어 Edge 핀홀 300µm까지 허용, 수율 상승` });
+            fee -= 0.15; parts.push({ label:'저가혹 완화(Edge 300µm 허용)', amount:-0.15, type:'down' });
+            factors.push({ dir:'down', amt:0.15, text:`기공도 ${porosity}%(≥30%) 및 코팅 속도 ${speed} m/min(≤40) → 연신 스트레스 적어 Edge 핀홀 300µm까지 허용, 수율 상승` });
         }
-
-        // --- 3. 다열 패턴 ---
         if (isMulti) {
-            fee += 0.50; parts.push({ label: '다열 패턴(Crown/스크랩)', amount: 0.50, type: 'up' });
-            factors.push({ dir: 'up', amt: 0.50,
-                text: `다열 패턴 → 유지부/무지부 압연 편차 극복 위한 Crown 엄격 제어 및 슬리팅 스크랩 로스로 수율 극악화` });
+            fee += 0.50; parts.push({ label:'다열 패턴(Crown/스크랩)', amount:0.50, type:'up' });
+            factors.push({ dir:'up', amt:0.50, text:`다열 패턴 → 유지부/무지부 압연 편차 극복 위한 Crown 엄격 제어 및 슬리팅 스크랩 로스로 수율 극악화` });
         }
-
         const totalCost = lmePrice + fee;
 
-        // ===== SS-curve 기반 물성 산출 =====
-        const utsReq = isUltraLoading ? CALIB.utsUltra : CALIB.utsBase;     // 요구 인장강도
-        const ysReq  = +(CALIB.ysRatio * utsReq).toFixed(1);                // 항복강도
-        // 요구 연신율: 가혹(고응력) 시 압연 conform 위해 상향 요구
-        const elReq  = (edgeTier === 'severe') ? Math.max(CALIB.elTotalStd, 3.0) : CALIB.elTotalStd;
-        const elLimit = +elStd(utsReq).toFixed(2);                          // 표준 메탈 한계 연신율
-        const margin  = +(elLimit - elReq).toFixed(2);                      // 여유
+        // ===== 2. 메탈 물성 산출 (문헌 기반) =====
+        const utsCap = utsKgf(r);            // 압하율 기반 인장강도 (capability)
+        const elCap  = elFromR(r);           // 압하율 기반 총 연신율
+        const ysRat  = ysRatioR(r);          // 항복비
+        const ys     = ysRat * utsCap;       // 항복강도
+        const uEl    = Math.max(0.5, elCap * 0.72); // 균일연신 ≈ 0.72·총연신 (Considère 근사)
 
+        // 공정 요구 (수율 로직과 정합): 초고로딩 → UTS≥29, 극가혹 → EL≥3.0
+        const utsReq = isUltraLoading ? Math.max(29, utsCap) : utsCap;
+        const elReqV = (edgeTier === 'severe') ? Math.max(3.0, elCap) : elCap;
+        const elevated = (utsReq > utsCap + 0.01) || (elReqV > elCap + 0.01);
+
+        // SS-curve 적합성: 요구 UTS 달성에 필요한 압하율에서의 연성 vs 요구 연신
+        const rNeed = rForUTSkgf(utsReq);
+        const elPoss = elFromR(Math.min(rNeed, 0.98));
+        const margin = +(elPoss - elReqV).toFixed(2);
         let feas;
-        if (margin >= 0.5)      feas = { color:'#27ae60', label:'표준 메탈 영역 (달성 여유 충분)' };
-        else if (margin >= 0)   feas = { color:'#f39c12', label:'표준 한계 근접 (청정도·temper 정밀관리 필요)' };
-        else                    feas = { color:'#e74c3c', label:'곡선 초과 → 특수 합금/열처리 필요' };
+        if (!elevated)            feas = { color:'#27ae60', label:'압하율–물성 정합 (표준 메탈 단독 달성)' };
+        else if (rNeed > 0.97)    feas = { color:'#e74c3c', label:'압연 한계 초과 → 특수 합금 필수' };
+        else if (margin >= 0.3)   feas = { color:'#27ae60', label:'표준 메탈 영역 (달성 여유)' };
+        else if (margin >= 0)     feas = { color:'#f39c12', label:'표준 한계 근접 (청정도·temper 정밀관리)' };
+        else                      feas = { color:'#e74c3c', label:'강도–연신 동시충족 불가 → 특수 합금/열처리' };
 
-        // ===== 섹션 1 =====
+        // 텐션 안전여유
+        const tenPct = ys > 0 ? (webTen / ys * 100) : 0;
+        let tenState = tenPct <= 15 ? {c:'#27ae60', t:'안전'} : (tenPct <= 25 ? {c:'#f39c12', t:'주의'} : {c:'#e74c3c', t:'위험(소성/네킹 우려)'});
+
+        // 핀홀 리스크 (MDPI: 면적 피크 ~50% 압하율) + 박물 민감도
+        const riskRed = Math.exp(-Math.pow((r - 0.5)/0.18, 2)); // 50%에서 1.0
+        const thinF = Math.min(Math.max((16 - thickness)/8, 0), 1);
+        const phIdx = Math.round(100 * Math.min(Math.max(0.7*riskRed + 0.3*thinF, 0), 1));
+        const phLevel = phIdx > 55 ? '높음' : (phIdx > 25 ? '보통' : '낮음');
+
+        // ===== 섹션 1 출력 =====
         document.getElementById('totalCostOutput').innerText = `$ ${totalCost.toFixed(2)} / kg`;
         const formulaStr = parts.map(p => {
-            if (p.type === 'base') return `${p.amount.toFixed(2)}<span style="opacity:.7"> (${p.label})</span>`;
-            const sign = p.amount >= 0 ? '+ ' : '− ';
+            if (p.type==='base') return `${p.amount.toFixed(2)}<span style="opacity:.7"> (${p.label})</span>`;
+            const sign = p.amount>=0 ? '+ ' : '− ';
             return `${sign}${Math.abs(p.amount).toFixed(2)}<span style="opacity:.7"> (${p.label})</span>`;
         }).join(' ');
         document.getElementById('formulaOutput').innerHTML =
             `LME ${lmePrice.toFixed(2)} + 가공비 ${fee.toFixed(2)} = <b>$ ${totalCost.toFixed(2)} / kg</b>`
             + `<br><span style="font-size:13px">가공비 산출: ${formulaStr} = <b>${fee.toFixed(2)} $/kg</b></span>`;
-
         const fl = document.getElementById('factorList'); fl.innerHTML = '';
-        if (factors.length === 0) {
-            fl.innerHTML = '<li>특이 증감 요인 없음 — Baseline 표준 조건으로 가공비 변동 없음.</li>';
-        } else {
-            factors.forEach(f => {
-                const tag = f.dir === 'up' ? `<span class="up">+$${f.amt.toFixed(2)}</span>` : `<span class="down">−$${f.amt.toFixed(2)}</span>`;
-                const li = document.createElement('li'); li.innerHTML = `${tag} : ${f.text}`; fl.appendChild(li);
-            });
-        }
+        if (!factors.length) fl.innerHTML = '<li>특이 증감 요인 없음 — Baseline 표준 조건으로 가공비 변동 없음.</li>';
+        else factors.forEach(f => { const tag=f.dir==='up'?`<span class="up">+$${f.amt.toFixed(2)}</span>`:`<span class="down">−$${f.amt.toFixed(2)}</span>`; const li=document.createElement('li'); li.innerHTML=`${tag} : ${f.text}`; fl.appendChild(li); });
 
         // ===== 섹션 2 : SS-curve + 스펙 =====
-        renderCurve(elReq, utsReq, feas.color);
+        renderCurve(Math.min(elReqV,3), Math.min(utsReq,35), feas.color);
         document.getElementById('curveLegend').innerHTML =
-            `<div><span class="swatch" style="background:#3498db"></span>표준 메탈 SS-curve (실측 예시 기반)</div>`
-          + `<div><span class="swatch" style="background:${feas.color}"></span>요구 운전점 (EL ${elReq}% / UTS ${utsReq} kgf/mm²)</div>`
-          + `<div style="margin-top:6px">표준 한계 연신율 @UTS ${utsReq}: <b>${elLimit}%</b> · 여유 <b>${margin >= 0 ? '+' : ''}${margin}%p</b></div>`
-          + `<div style="margin-top:8px">적합성: <span class="feas-badge" style="background:${feas.color}">${feas.label}</span></div>`
-          + `<div class="note" style="margin-top:8px">점선 박스 = 표준 운전 기준 (UTS ${CALIB.utsStd} / EL ${CALIB.elTotalStd}%). 요구점이 곡선 위쪽·오른쪽으로 벗어날수록 특수 야금 필요.</div>`;
+            `<div><span class="swatch" style="background:#3498db"></span>실측 예시 SS-curve (메탈 기준)</div>`
+          + `<div><span class="swatch" style="background:${feas.color}"></span>요구 운전점 (EL ${elReqV.toFixed(1)}% / UTS ${utsReq.toFixed(1)} kgf/mm²)</div>`
+          + `<div style="margin-top:6px">압하율 <b>${rPct}%</b> → 산출 UTS <b>${utsCap.toFixed(1)}</b> · EL <b>${elCap.toFixed(1)}%</b> · YS <b>${ys.toFixed(1)}</b></div>`
+          + `<div style="margin-top:6px">적합성: <span class="feas-badge" style="background:${feas.color}">${feas.label}</span></div>`
+          + (elevated ? `<div class="note" style="margin-top:6px">요구 UTS 달성 필요 압하율 ≈ ${(rNeed*100).toFixed(0)}% → 그 지점 연성 ${elPoss.toFixed(1)}% vs 요구 ${elReqV.toFixed(1)}% (여유 ${margin>=0?'+':''}${margin}%p)</div>` : '');
 
         const specs = [];
-        specs.push({ name:'두께', base:`${thickness} µm`, applied:`${thickness} µm`, note:'선택 두께' });
+        specs.push({ name:'두께', applied:`${thickness} µm`, note:'선택 두께' });
+        specs.push({ name:'냉간 압하율', applied:`${rPct} %`, note:'가공경화·연성·핀홀 산출 입력' });
 
-        // 인장강도 (UTS)
-        if (isUltraLoading) {
-            specs.push({ name:'인장강도 (UTS)', base:'27~28 kgf/mm²', applied:`≥ ${utsReq} kgf/mm² (≈${(utsReq*9.807).toFixed(0)} MPa)`, changed:true,
-                note:`로딩량 ${loadingMg} mg/25cm² 하중 대비 파단 방지` });
+        // 인장강도
+        if (isUltraLoading && utsReq > utsCap + 0.01) {
+            specs.push({ name:'인장강도 (UTS)', applied:`≥ ${utsReq.toFixed(0)} kgf/mm² (요구) · 산출 ${utsCap.toFixed(1)}`, changed:true,
+                note:`가공경화식 σ=σs−(σs−σ0)e^(−k·r) 산출 ${utsCap.toFixed(1)} kgf/mm². 초고로딩 요구 ${utsReq.toFixed(0)}는 압하율 ${(rNeed*100).toFixed(0)}% 필요` });
         } else {
-            specs.push({ name:'인장강도 (UTS)', base:'27~28 kgf/mm²', applied:`27~28 kgf/mm² (≈${(utsReq*9.807).toFixed(0)} MPa)`, note:'Baseline 유지' });
+            specs.push({ name:'인장강도 (UTS)', applied:`~ ${utsCap.toFixed(1)} kgf/mm² (≈${(utsCap*WH.kgf).toFixed(0)} MPa)`, changed:false,
+                note:`가공경화식 σ=σs−(σs−σ0)e^(−k·r), 압하율 ${rPct}% 적용` });
         }
-        // 항복강도 (YS) — 곡선 비율 기반
-        specs.push({ name:'항복강도 (YS)', base:'—', applied:`~ ${ysReq} kgf/mm²`, changed:false,
-            note:`SS-curve YS/UTS≈${CALIB.ysRatio} 적용 · 가공경화 여유 ≈ ${(100*(1-CALIB.ysRatio)).toFixed(0)}%` });
-        // 총 연신율
-        const elChanged = (elReq !== CALIB.elTotalStd);
-        specs.push({ name:'연신율 (총)', base:`avg ${CALIB.elTotalStd}%`, applied: elChanged ? `≥ ${elReq}%` : `avg ${CALIB.elTotalStd}%`, changed: elChanged,
-            note: elChanged ? '고응력 캘린더링 conform 위해 상향 요구' : 'Baseline 유지' });
+        // 항복강도
+        specs.push({ name:'항복강도 (YS)', applied:`~ ${ys.toFixed(1)} kgf/mm² (YS/UTS≈${ysRat.toFixed(2)})`, changed:false,
+            note:`압하율에 따른 항복비 (어닐 0.30 → 고압하 상승). 가공경화 여유 ≈ ${(100*(1-ysRat)).toFixed(0)}%` });
+        // 연신율
+        if (edgeTier === 'severe' && elReqV > elCap + 0.01) {
+            specs.push({ name:'연신율 (총)', applied:`≥ ${elReqV.toFixed(1)}% (요구) · 산출 ${elCap.toFixed(1)}%`, changed:true,
+                note:`연성 감쇠식 EL=EL_f+(EL_0−EL_f)e^(−d·r) 산출 ${elCap.toFixed(1)}%. 고응력 캘린더링 conform 위해 ≥3.0% 요구` });
+        } else {
+            specs.push({ name:'연신율 (총)', applied:`~ ${elCap.toFixed(1)} %`, changed:false,
+                note:`연성 감쇠식 EL=EL_f+(EL_0−EL_f)e^(−d·r), 압하율 ${rPct}% 적용` });
+        }
         // 균일연신
-        specs.push({ name:'균일연신 (UTS점)', base:`~${CALIB.elUniformStd}%`, applied:`~${CALIB.elUniformStd}%`, changed:false,
-            note:'압연 시 합제와 함께 늘어나는 한계 변형률 (Considère)' });
+        specs.push({ name:'균일연신 (UTS점)', applied:`~ ${uEl.toFixed(1)} %`, changed:false, note:'≈0.72·총연신 (Considère 근사) — 압연 conform 한계' });
+        // 텐션 안전여유
+        specs.push({ name:'웹 텐션 안전여유', applied:`<span class="feas-badge" style="background:${tenState.c}">${tenState.t}</span> (장력 ${webTen} = YS의 ${tenPct.toFixed(0)}%)`, changed:false, raw:true,
+            note:`σ_web ${webTen} / YS ${ys.toFixed(1)} kgf/mm². 웹핸들링 권장 운전장력 ≤ YS의 15~25%` });
         // SS-curve 적합성
-        specs.push({ name:'SS-curve 적합성', base:'—', applied:`<span class="feas-badge" style="background:${feas.color}">${feas.label}</span>`,
-            note:`요구(EL ${elReq}% / UTS ${utsReq}) vs 표준한계 ${elLimit}% → 여유 ${margin >= 0 ? '+' : ''}${margin}%p`, raw:true });
+        specs.push({ name:'SS-curve 적합성', applied:`<span class="feas-badge" style="background:${feas.color}">${feas.label}</span>`, raw:true,
+            note: elevated ? `요구(EL ${elReqV.toFixed(1)}% / UTS ${utsReq.toFixed(1)}) vs 압하율 트레이드오프 → 여유 ${margin>=0?'+':''}${margin}%p` : `현 압하율에서 강도·연성이 자체 정합` });
 
         // 핀홀 - 코팅부
-        specs.push({ name:'핀홀 (코팅부/전체)', base:'500 µm 이하', applied:'500 µm 이하', note:`Baseline 유지 · ${cleanGrade(500)}` });
-
+        specs.push({ name:'핀홀 (코팅부/전체)', applied:'500 µm 이하', changed:false,
+            note:`Baseline · ${cleanGrade(500)} · 핀홀 리스크 ${phLevel}(${phIdx}/100): 압하율 ${rPct}% (면적 피크 ~50% 대비), 박물 민감도 반영` });
         // 핀홀 - 무지부(Edge)
         const baseEdge = is12 ? '200 µm 이하 (Edge 20mm)' : '별도 규제 없음';
-        let edgeApplied, edgeChanged = false, edgeRelaxed = false, edgeUm, edgeNote;
+        let edgeApplied, edgeChanged=false, edgeRelaxed=false, edgeUm, edgeNote;
         if (edgeTier === 'severe') {
-            edgeUm = 100; edgeApplied = '100 µm 이하 (Edge 강화)'; edgeChanged = true;
-            const rs = [];
-            if (porosity <= 22) rs.push(`기공도 ${porosity}%`);
-            if (speed >= 80)    rs.push(`속도 ${speed} m/min`);
-            edgeNote = (isThin ? `${rs.join(' / ')}로 무규제 → 100µm 신규 강화 (+$0.10) · ` : `${rs.join(' / ')}로 200µm → 100µm 강화 · `) + cleanGrade(100);
+            edgeUm=100; edgeApplied='100 µm 이하 (Edge 강화)'; edgeChanged=true;
+            const rs=[]; if(porosity<=22) rs.push(`기공도 ${porosity}%`); if(speed>=80) rs.push(`속도 ${speed} m/min`);
+            edgeNote=(isThin?`${rs.join(' / ')}로 무규제 → 100µm 신규 (+$0.10) · `:`${rs.join(' / ')}로 200→100µm · `)+cleanGrade(100)+` · 핀홀 리스크 ${phLevel}`;
         } else if (edgeTier === 'loose') {
-            edgeUm = is12 ? 300 : 500; edgeApplied = is12 ? '300 µm 까지 허용' : '별도 규제 없음'; edgeRelaxed = is12;
-            edgeNote = (is12 ? `기공도 ${porosity}% / 속도 ${speed} m/min 저가혹으로 200µm → 300µm 완화 · ` : '저가혹 + 무규제 그룹 (변동 없음) · ') + cleanGrade(edgeUm);
+            edgeUm=is12?300:500; edgeApplied=is12?'300 µm 까지 허용':'별도 규제 없음'; edgeRelaxed=is12;
+            edgeNote=(is12?`저가혹으로 200→300µm 완화 · `:`저가혹·무규제 그룹 · `)+cleanGrade(edgeUm)+` · 핀홀 리스크 ${phLevel}`;
         } else {
-            edgeUm = is12 ? 200 : 500; edgeApplied = baseEdge;
-            edgeNote = 'Baseline 유지 · ' + cleanGrade(edgeUm);
+            edgeUm=is12?200:500; edgeApplied=baseEdge;
+            edgeNote='Baseline · '+cleanGrade(edgeUm)+` · 핀홀 리스크 ${phLevel}`;
         }
-        specs.push({ name:'핀홀 (무지부/Edge)', base:baseEdge, applied:edgeApplied, changed:edgeChanged, relaxed:edgeRelaxed, note:edgeNote });
+        specs.push({ name:'핀홀 (무지부/Edge)', applied:edgeApplied, changed:edgeChanged, relaxed:edgeRelaxed, note:edgeNote });
 
-        const tbody = document.getElementById('specBody'); tbody.innerHTML = '';
+        const tbody = document.getElementById('specBody'); tbody.innerHTML='';
         specs.forEach(s => {
-            const tr = document.createElement('tr');
-            const th = document.createElement('th'); th.innerText = s.name;
-            const td = document.createElement('td');
-            if (s.changed) td.className = 'changed';
-            else if (s.relaxed) td.className = 'relaxed';
-            const arrow = (!s.raw && s.base !== '—' && s.base !== s.applied) ? `<span style="opacity:.6">${s.base} →</span> ` : '';
-            td.innerHTML = `${arrow}${s.applied}`;
-            const tdNote = document.createElement('td'); tdNote.className = 'note'; tdNote.innerHTML = s.note;
-            tr.appendChild(th); tr.appendChild(td); tr.appendChild(tdNote);
-            tbody.appendChild(tr);
+            const tr=document.createElement('tr');
+            const th=document.createElement('th'); th.innerText=s.name;
+            const td=document.createElement('td'); if(s.changed) td.className='changed'; else if(s.relaxed) td.className='relaxed'; td.innerHTML=s.applied;
+            const tn=document.createElement('td'); tn.className='note'; tn.innerHTML=s.note;
+            tr.appendChild(th); tr.appendChild(td); tr.appendChild(tn); tbody.appendChild(tr);
         });
 
+        document.getElementById('refs').innerHTML =
+            `<b>산출 근거 (문헌):</b><br>`
+          + `• 냉간 가공경화·연성 트레이드오프(어닐 YS 27→75% 압하 125 MPa, 강도↑·연성↓ 포화 거동): `
+          + `<a href="https://www.totalmateria.com/en-us/articles/work-hardening-aluminum-alloys-2" target="_blank">Total Materia, Work Hardening of Al</a>, 1100 O 90 / H18 150 MPa(공급사 데이터시트)<br>`
+          + `• 핀홀 면적 압하율 ~50%에서 피크 후 감소, 입자/모재 정합 손실 기구: `
+          + `<a href="https://www.mdpi.com/2079-6412/15/4/472" target="_blank">Coatings 2025, 15(4), 472 (MDPI)</a><br>`
+          + `• 균일연신 ≈ Considère 기준, 웹 텐션 ≤ YS의 15~25% (웹핸들링 권장). 모델 상수는 제공된 실측 SS-curve로 보정.`;
+
         // ===== 섹션 3 =====
-        const upFactors = factors.filter(f => f.dir === 'up');
-        const downFactors = factors.filter(f => f.dir === 'down');
-        let comment = '';
-        if (upFactors.length === 0) {
-            comment = `<p>현재 조건(로딩량 ${loadingMg} mg/25cm² · 기공도 ${porosity}% · 속도 ${speed} m/min)은 Baseline 표준 범위 내이며, 요구 운전점도 SS-curve 상 <b>${feas.label}</b>으로 협력사 수율 부담이 낮은 <b>최적 구간</b>입니다.</p>`;
-            if (downFactors.length) comment += `<p>저가혹 운전으로 <span class="down">가공비 절감(−$0.15/kg)</span> 여지가 있으니 Edge 핀홀 완화(300µm)를 계약에 명문화하면 추가 절감 가능합니다.</p>`;
+        const upFactors = factors.filter(f=>f.dir==='up'); const downFactors = factors.filter(f=>f.dir==='down');
+        let comment='';
+        if (!upFactors.length) {
+            comment = `<p>현재 조건(로딩량 ${loadingMg} mg/25cm² · 기공도 ${porosity}% · 속도 ${speed} m/min · 압하율 ${rPct}%)은 Baseline 표준 범위이며, 산출 물성도 SS-curve 상 <b>${feas.label}</b>으로 수율 부담이 낮은 <b>최적 구간</b>입니다.</p>`;
+            if (downFactors.length) comment += `<p>저가혹 운전으로 <span class="down">가공비 절감(−$0.15/kg)</span> 여지가 있습니다.</p>`;
         } else {
-            const top = upFactors.reduce((a,b) => (b.amt > a.amt ? b : a));
-            comment += `<p>현재 협력사 수율을 가장 크게 잠식하는 핵심 인자는 <span class="driver">${top.text} (+$${top.amt.toFixed(2)}/kg)</span> 입니다.</p>`;
-            if (feas.color !== '#27ae60') {
-                comment += `<p>또한 요구 물성이 SS-curve 상 <b style="color:${feas.color}">${feas.label}</b>(표준 한계 대비 여유 ${margin >= 0 ? '+' : ''}${margin}%p)이라, 인장강도와 연신율을 동시에 만족시키기 위한 <b>야금학적 부담</b>이 큽니다.</p>`;
-            }
-            const tips = [];
-            if (isMulti) tips.push('<b>다열 패턴(+$0.50):</b> 슬리팅 스크랩이 최대 인자. 레인 피치 확대/단일 전환, 불가 시 Crown 허용편차 합리화.');
-            if (isUltraLoading) tips.push('<b>초고로딩(+$0.40):</b> 로딩량 625 mg/25cm² 미만으로 낮추면 UTS≥29 요구가 해소되어 SS-curve 여유가 커지고 표준 메탈 사용 가능.');
-            if (edgeTier === 'severe') {
-                const fix = [];
-                if (porosity <= 22) fix.push('기공도를 24% 수준으로 타협(>22%)');
-                if (speed >= 80)    fix.push('코팅 속도를 80 m/min 미만으로 조정');
-                tips.push(`<b>Edge 가혹(+$0.30):</b> ${fix.join(' 및 ')}하면 Edge 핀홀 100µm 강화 및 연신율 상향 요구가 풀려 SS-curve 적합성이 회복됩니다.`);
-            }
-            if (feas.color !== '#27ae60') tips.push('<b>SS-curve 여유 확보:</b> UTS·EL 동시 요구가 곡선 한계에 근접할 경우, 고청정 용탕·미세 결정립 제어(특수 합금)로 곡선 자체를 우상향시키는 메탈 grade 협의 필요.');
+            const top = upFactors.reduce((a,b)=>(b.amt>a.amt?b:a));
+            comment += `<p>협력사 수율을 가장 크게 잠식하는 핵심 인자는 <span class="driver">${top.text} (+$${top.amt.toFixed(2)}/kg)</span> 입니다.</p>`;
+            if (feas.color !== '#27ae60') comment += `<p>또한 요구 물성이 압하율 트레이드오프 상 <b style="color:${feas.color}">${feas.label}</b>(여유 ${margin>=0?'+':''}${margin}%p)이라, 강도·연신 동시 충족의 <b>야금학적 부담</b>이 큽니다.</p>`;
+            const tips=[];
+            if (isMulti) tips.push('<b>다열 패턴(+$0.50):</b> 슬리팅 스크랩이 최대 인자. 레인 피치 확대/단일 전환, Crown 허용편차 합리화.');
+            if (isUltraLoading) tips.push(`<b>초고로딩(+$0.40):</b> 로딩량 625 mg/25cm² 미만이면 UTS≥29 요구가 풀려 압하율 여유 확보, 표준 메탈 사용 가능.`);
+            if (edgeTier === 'severe') { const fix=[]; if(porosity<=22) fix.push('기공도 24% 수준 타협(>22%)'); if(speed>=80) fix.push('속도 80 미만 조정'); tips.push(`<b>Edge 가혹(+$0.30):</b> ${fix.join(' 및 ')} 시 핀홀 100µm·연신율 상향 요구 해소.`); }
+            if (feas.color !== '#27ae60') tips.push('<b>SS-curve 여유:</b> 강도·연신 동시 요구가 압연 트레이드오프를 벗어나면, 고청정 용탕·미세 결정립(특수 합금)으로 곡선 자체를 우상향시키는 grade 협의 필요.');
+            if (tenPct > 25) tips.push(`<b>웹 텐션(${tenPct.toFixed(0)}% of YS):</b> 운전장력을 YS의 15~25% 이하로 낮춰 소성변형·사행 리스크 완화.`);
             comment += `<p style="margin-top:10px"><b>💡 가공비 방어(Cost-down) 엔지니어링 대안</b></p><ul>`;
-            tips.forEach(t => comment += `<li>${t}</li>`);
-            comment += `</ul>`;
-            if (downFactors.length) comment += `<p style="margin-top:8px">참고: 저가혹 완화로 <span class="down">−$0.15/kg</span> 절감이 이미 반영됨.</p>`;
+            tips.forEach(t=>comment+=`<li>${t}</li>`); comment+=`</ul>`;
+            if (downFactors.length) comment += `<p style="margin-top:8px">참고: 저가혹 완화로 <span class="down">−$0.15/kg</span> 절감 반영.</p>`;
         }
         document.getElementById('scComment').innerHTML = comment;
 
-        document.getElementById('outputSection').style.display = 'block';
-        document.getElementById('outputSection').scrollIntoView({ behavior: 'smooth' });
+        document.getElementById('outputSection').style.display='block';
+        document.getElementById('outputSection').scrollIntoView({ behavior:'smooth' });
     }
 </script>
 
